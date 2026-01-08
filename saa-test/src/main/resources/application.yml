@@ -1,0 +1,36 @@
+logging.config: classpath:logging-config.xml
+# 服务端口号
+server.port: 9911
+# 设置服务名
+spring.application.name: demo-Y-hello-service
+
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 100MB
+  thymeleaf:
+    mode: LEGACYHTML5
+    cache: false
+  mvc: 
+     static-path-pattern: /**
+  web: 
+    resources: 
+      static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/,classpath:/templates/
+
+server: 
+  max-http-header-size: 10485760
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+
+# 数学表达式历史记录配置
+math:
+  history:
+    enabled: true
+    max-size: 100
+    persistence-enabled: true
+    file-path: data/math-history.json

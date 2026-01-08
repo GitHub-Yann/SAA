@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学表达式计算器</title>
+    <link rel="icon" type="image/x-icon" href="/img/favicon-64x64.ico">
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0 16px;
+            background-color: #f5f6fa;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 48px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(15, 35, 95, 0.12);
+            padding: 32px;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 28px;
+            text-align: center;
+            color: #2d3a4a;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #4d5b6a;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #c7d2e2;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3f7cea;
+            box-shadow: 0 0 0 3px rgba(63, 124, 234, 0.2);
+        }
+
+        button {
+            margin-top: 20px;
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background-color: #3f7cea;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:disabled {
+            background-color: #8aa8e6;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #3367cc;
+        }
+
+        .result {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 8px;
+            background-color: #f0f4ff;
+            border: 1px solid #d3dcff;
+            color: #233044;
+            word-break: break-word;
+            white-space: pre-line;
+        }
+
+        .result.error {
+            background-color: #ffecec;
+            border-color: #ffb4b4;
+            color: #9e1e1e;
+        }
+
+        .hint {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #657290;
+        }
+
+        .history-section {
+            margin-top: 32px;
+            padding: 20px;
+            border-radius: 12px;
+            background-color: #f8fafc;
+            border: 1px solid #e0e7ff;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .history-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #2d3a4a;
+        }
+
+        .history-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .history-item {
+            padding: 12px 0;
+            border-top: 1px dashed #d5dffc;
+        }
+
+        .history-item:first-child {
+            border-top: none;
+        }
+
+        .history-expression {
+            font-weight: 600;
+            color: #2b3648;
+            word-break: break-word;
+        }
+
+        .history-result {
+            margin-top: 4px;
+            color: #4d5b6a;
+        }
+
+        .history-meta {
+            margin-top: 6px;
+            font-size: 13px;
+            color: #7b879c;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge.success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .history-empty {
+            margin-top: 8px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .history-actions button {
+            width: auto;
+            min-width: 96px;
+            margin-top: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <h1>数学表达式计算器</h1>
+        <form id="expressionForm">
+            <label for="expressionInput">输入表达式（示例：<code>(1 + 2.5) * 3 - 4 / 2</code>）</label>
+            <input id="expressionInput" type="text" name="expression" placeholder="请输入需要计算的数学表达式" autocomplete="off" />
+            <button type="submit" id="submitButton">开始计算</button>
+        </form>
+        <section id="resultPanel" class="result" hidden></section>
+        <p class="hint">说明：支持加、减、乘、除、小数与括号。提交后会调用后端接口 <code>/api/math/calculate</code>。</p>
+        <section class="history-section">
+            <div class="history-header">
+                <h2>历史记录</h2>
+                <div class="history-actions">
+                    <button type="button" id="refreshHistoryButton">重新加载</button>
+                </div>
+            </div>
+            <ul id="historyList" class="history-list" hidden></ul>
+            <p id="historyEmpty" class="history-empty">暂无历史记录，先尝试计算一个表达式吧。</p>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            const HISTORY_LIMIT = 20;
+            const form = document.getElementById("expressionForm");
+            const input = document.getElementById("expressionInput");
+            const button = document.getElementById("submitButton");
+            const resultPanel = document.getElementById("resultPanel");
+            const historyList = document.getElementById("historyList");
+            const historyEmpty = document.getElementById("historyEmpty");
+            const refreshHistoryButton = document.getElementById("refreshHistoryButton");
+
+            function showMessage(message, isError) {
+                resultPanel.textContent = message;
+                resultPanel.classList.toggle("error", Boolean(isError));
+                resultPanel.hidden = false;
+            }
+
+            function formatDate(value) {
+                if (!value) {
+                    return "未知时间";
+                }
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) {
+                    return value;
+                }
+                return date.toLocaleString();
+            }
+
+            function renderHistory(records) {
+                if (!Array.isArray(records) || records.length === 0) {
+                    historyList.hidden = true;
+                    historyEmpty.hidden = false;
+                    historyEmpty.textContent = "暂无历史记录，先尝试计算一个表达式吧。";
+                    return;
+                }
+                historyList.innerHTML = "";
+                historyList.hidden = false;
+                historyEmpty.hidden = true;
+                records.forEach((record) => {
+                    const item = document.createElement("li");
+                    item.className = "history-item";
+
+                    const badge = document.createElement("span");
+                    badge.className = `badge ${record.success ? "success" : "error"}`;
+                    badge.textContent = record.success ? "成功" : "失败";
+
+                    const expression = document.createElement("div");
+                    expression.className = "history-expression";
+                    expression.textContent = record.expression || record.rawExpression || "(空表达式)";
+
+                    const result = document.createElement("div");
+                    result.className = "history-result";
+                    if (record.success) {
+                        result.textContent = `结果：${record.result || "未知"}`;
+                    } else {
+                        const message = record.errorMsg || "未知错误";
+                        const code = record.errorCode ? `[${record.errorCode}] ` : "";
+                        result.textContent = `错误：${code}${message}`;
+                    }
+
+                    const meta = document.createElement("div");
+                    meta.className = "history-meta";
+                    const duration = typeof record.durationMillis === "number" ? `${record.durationMillis}ms` : "耗时未知";
+                    const ip = record.requestIp || "未知IP";
+                    meta.textContent = `${formatDate(record.evaluatedAt)} · ${duration} · ${ip}`;
+
+                    item.appendChild(badge);
+                    item.appendChild(expression);
+                    item.appendChild(result);
+                    item.appendChild(meta);
+                    historyList.appendChild(item);
+                });
+            }
+
+            async function loadHistory() {
+                try {
+                    refreshHistoryButton.disabled = true;
+                    const response = await fetch(`/api/math/history?limit=${HISTORY_LIMIT}`);
+                    if (!response.ok) {
+                        throw new Error(`历史记录请求失败，状态码：${response.status}`);
+                    }
+                    const payload = await response.json();
+                    const records = (payload.data && payload.data.records) || [];
+                    renderHistory(records);
+                } catch (error) {
+                    historyList.hidden = true;
+                    historyEmpty.hidden = false;
+                    historyEmpty.textContent = `无法加载历史记录：${error.message || error}`;
+                } finally {
+                    refreshHistoryButton.disabled = false;
+                }
+            }
+
+            async function calculateExpression(expression) {
+                try {
+                    const response = await fetch("/api/math/calculate", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ expression })
+                    });
+                    const contentType = response.headers.get("content-type") || "";
+                    const isJson = contentType.includes("application/json");
+                    const payload = isJson ? await response.json() : null;
+                    if (!response.ok) {
+                        const fallback = payload && payload.errorMsg
+                            ? payload.errorMsg
+                            : `网络请求失败，状态码: ${response.status}`;
+                        showMessage(fallback, true);
+                        return;
+                    }
+                    if (!payload) {
+                        showMessage("服务端返回空响应，请稍后再试。", true);
+                        return;
+                    }
+                    if (!payload.result) {
+                        const prefix = payload.errorCode ? `[${payload.errorCode}] ` : "";
+                        const message = payload.errorMsg || "表达式计算失败，请稍后重试。";
+                        showMessage(prefix + message, true);
+                        return;
+                    }
+                    const data = payload.data || {};
+                    const expressionText = data.expression || expression;
+                    const resultText = data.result ?? "暂无结果";
+                    showMessage(`表达式：${expressionText}\n结果：${resultText}`, false);
+                } catch (error) {
+                    showMessage(error.message || "未知错误，请稍后再试。", true);
+                }
+            }
+
+            form.addEventListener("submit", function (event) {
+                event.preventDefault();
+                const expression = input.value.trim();
+                if (!expression) {
+                    showMessage("请先输入需要计算的表达式。", true);
+                    input.focus();
+                    return;
+                }
+                button.disabled = true;
+                showMessage("计算中，请稍候...", false);
+                calculateExpression(expression).finally(() => {
+                    button.disabled = false;
+                    loadHistory();
+                });
+            });
+
+            refreshHistoryButton.addEventListener("click", function () {
+                loadHistory();
+            });
+
+            loadHistory();
+        })();
+    </script>
+</body>
+
+</html>
